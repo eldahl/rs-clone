@@ -1,0 +1,4 @@
+CompileFlags:
+  Add:
+    - "-Iglad/include"
+    - "-I/usr/local/opt/glfw/include"
