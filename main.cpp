@@ -3,6 +3,7 @@
 #include <glm/detail/qualifier.hpp>
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/ext/matrix_transform.hpp>
+#include <glm/ext/vector_float2.hpp>
 #include <glm/ext/vector_float3.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -10,12 +11,15 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <glm/matrix.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
 #include "shader.h"
 #include "camera.h"
+#include "texture.h"
+#include "vertex_data.h"
 
 #include <iostream>
 
@@ -27,9 +31,18 @@ const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
 // Camera vectors
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 16.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+// Mouse
+bool firstMouse = false;
+bool leftMousePressed = false;
+float mouseX = 0.0f;
+float mouseY = 0.0f;
+float lastX = 400;
+float lastY = 300;
+glm::vec2 mouseNDC = glm::vec2(0.0f, 0.0f);
 
 // Camera euler angles
 float pitch = 0.0f;
@@ -37,10 +50,6 @@ float yaw = -90.0f;
 
 // Zoom
 float fov = 45.0f;
-
-// Mouse
-float lastX = 400;
-float lastY = 300;
 
 // Delta tiem
 float deltaTime = 0.0f;
@@ -51,17 +60,35 @@ float frameTime = 0.0f;
 int frameCount = 0;
 float fps = 0.0f;
 
+// Champ coords
+float champX = 4.5f;
+float champY = 4.5f;
+
+bool doMoveTowards = false;
+float targetX = 0.0f;
+float targetY = 0.0f;
+
+// Transformation matrices
+glm::mat4 projection;
+glm::mat4 view = glm::mat4(1.0f);
+
+
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+bool rayPlaneIntersection(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, glm::vec3& intersectionPoint, float planeZ = 0.0f);
+glm::vec2 mouseToNDC(float xpos, float ypos);
 
 int main()
 {
+    
     // glfw: initialize and configure
     // ------------------------------
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_DEPTH_BITS, 24);
+
 
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -80,7 +107,7 @@ int main()
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     
     // Mouse disable and movement callback
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    //glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback);
 
@@ -93,153 +120,68 @@ int main()
     }
     
     glEnable(GL_DEPTH_TEST);
+    glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 
     // build and compile our shader program
     // ------------------------------------
-    Shader ourShader("../vertex.vs", "../fragment.fs"); // you can name your shader files however you like
+    Shader groundShader("../res/shaders/ground.vs", "../res/shaders/ground.fs"); 
+    Shader champShader("../res/shaders/vertex.vs", "../res/shaders/fragment.fs"); 
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
     
-
-    float vertices[] = {
+    float champVertices[] = {
         -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
          0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
          0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
          0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
         -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f
+    };
+
+    float groundVertices[] = {
         -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-
-        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
          0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
         -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f
     };
-    
-    glm::vec3 cubePositions[] = {
-        glm::vec3( 0.0f,  0.0f,  0.0f), 
-        glm::vec3( 2.0f,  5.0f, -15.0f), 
-        glm::vec3(-1.5f, -2.2f, -2.5f),  
-        glm::vec3(-3.8f, -2.0f, -12.3f),  
-        glm::vec3( 2.4f, -0.4f, -3.5f),  
-        glm::vec3(-1.7f,  3.0f, -7.5f),  
-        glm::vec3( 1.3f, -2.0f, -2.5f),  
-        glm::vec3( 1.5f,  2.0f, -2.5f), 
-        glm::vec3( 1.5f,  0.2f, -1.5f), 
-        glm::vec3(-1.3f,  1.0f, -1.5f)  
-    };
-    
-    // Buffers
-    unsigned int VBO, VAO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
 
-    // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
-    glBindVertexArray(VAO);
+    VertexData groundVD = VertexData();
+    groundVD.bind(groundVertices, sizeof(groundVertices));
+    groundVD.setVertexAttrib(0, 3, 5, 0);
+    groundVD.setVertexAttrib(1, 2, 5, 3);
+    
+    VertexData champVD = VertexData();
+    champVD.bind(champVertices, sizeof(champVertices));
+    champVD.setVertexAttrib(0, 3, 5, 0);
+    champVD.setVertexAttrib(1, 2, 5, 3);
 
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    // color attribute
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
-    // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
-    // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
-    // glBindVertexArray(0);
-
-    // Generate texture object
-    unsigned int texture1, texture2;
-    glGenTextures(1, &texture1);
-    glGenTextures(1, &texture2);
-    
-    // Bind texture
-    glBindTexture(GL_TEXTURE_2D, texture1);
-    
-    // Set texture options
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    
     // Flip images loaded from stb_image
     stbi_set_flip_vertically_on_load(true);
 
-    // Load texture image
-    int width, height, nrChannels;
-    unsigned char *data = stbi_load("../res/container.jpg", &width, &height, &nrChannels, 0);
+    Texture champ = Texture("../res/textures/champ.png", true);
+    Texture ground = Texture("../res/textures/ground.jpg", false);
     
-    // If successful, generate texture into the bound GL texture
-    if (data) {
-        // Generate texture
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else {
-        std::cout << "Failed to load texture!" << std::endl;
-    }
-    
-    // Free image
-    stbi_image_free(data);
-    
-    // Bind texture
-    glBindTexture(GL_TEXTURE_2D, texture2);
-    
-    // Load texture image
-    data = stbi_load("../res/awesomeface.png", &width, &height, &nrChannels, 0);
-    
-    // If successful, generate texture into the bound GL texture
-    if (data) {
-        // Generate texture
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else {
-        std::cout << "Failed to load texture!" << std::endl;
-    }
+    ground.genAndBindAndLoad();
+    champ.genAndBindAndLoad();
 
-    // Free image
-    stbi_image_free(data);
-    
     // Use shader
-    ourShader.use();    
+    groundShader.use();
     // Set uniform for shaders
-    ourShader.setInt("texture1", 0);
-    ourShader.setInt("texture2", 1);
+    groundShader.setInt("groundTex", 0);
+
+    champShader.use();
+    champShader.setInt("champTex", 1);
+
+    // render the triangle
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, ground.ID);
     
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, champ.ID);
+
     // Arrange stuff before rendering
     /*
     glm::vec4 vec(1.0f, 0.0f, 0.0f, 1.0f);
@@ -249,6 +191,12 @@ int main()
     std::cout << vec.x << vec.y << vec.z << std::endl;
     */
 
+    // Tranformations
+    // note that we're translating the scene in the reverse direction of where we want to move
+    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));    
+    view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+    
+    projection = glm::perspective(glm::radians(fov), 800.0f / 600.0f, 0.1f, 100.0f);
 
     // render loop
     // -----------
@@ -258,49 +206,42 @@ int main()
         // input
         // -----
         processInput(window);
-        
-        // Tranformations
-        glm::mat4 trans = glm::mat4(1.0f);
-        trans = glm::translate(trans, glm::vec3(0.5f, -0.5f, 0.0f));
-        trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
 
-        glm::mat4 view = glm::mat4(1.0f);
-        // note that we're translating the scene in the reverse direction of where we want to move
-        view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));    
-        
-        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-        
-        glm::mat4 projection;
-        projection = glm::perspective(glm::radians(fov), 800.0f / 600.0f, 0.1f, 100.0f);
-
+        groundShader.use();
         // Assign uniform to shader with transformation matricies
-        ourShader.setMat4("transform", trans);
-        ourShader.setMat4("view", view);
-        ourShader.setMat4("projection", projection);
-        
+        groundShader.setMat4("view", view);
+        groundShader.setMat4("projection", projection);
+
         // render
         // ------
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // render the triangle
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture1);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, texture2);
-
-        glBindVertexArray(VAO);
-        for(unsigned int i = 0; i < 10; i++)
+        glBindVertexArray(groundVD.vaoID);
+        for(int x = -5; x < 5; x++)
         {
-            glm::mat4 model = glm::mat4(1.0f);
-            model = glm::translate(model, cubePositions[i]);
-            float angle = 20.0f * i; 
-            model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-            ourShader.setMat4("model", model);
+            for(int y = -5; y < 5; y++) {
+                glm::mat4 model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3((float)x + 0.5f, (float)y + 0.5f, 0.0f));
+                groundShader.setMat4("model", model);
 
-            glDrawArrays(GL_TRIANGLES, 0, 36);
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+            }
         }
         //glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        champShader.use();
+        // Assign uniform to shader with transformation matricies
+        champShader.setMat4("view", view);
+        champShader.setMat4("projection", projection);
+
+        glBindVertexArray(champVD.vaoID);
+
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(champX, champY, 1.0f));
+        champShader.setMat4("model", model);
+
+        glDrawArrays(GL_TRIANGLES, 0, 6);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
@@ -310,7 +251,7 @@ int main()
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
-        
+
         frameTime += deltaTime;
         if (frameTime <= 1) {
             frameCount++;
@@ -321,18 +262,34 @@ int main()
             frameTime = 0.0f;
             std::cout << "FPS: " << fps << std::endl;
         }
-
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
-
-    // optional: de-allocate all resources once they've outlived their purpose:
-    // ------------------------------------------------------------------------
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-
+    
+    glDeleteVertexArrays(1, &champVD.vaoID);
+    glDeleteBuffers(1, &champVD.vboID);
+    glDeleteVertexArrays(1, &groundVD.vaoID);
+    glDeleteBuffers(1, &groundVD.vboID);
+    
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
     glfwTerminate();
     return 0;
+}
+
+bool rayPlaneIntersection(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, glm::vec3& intersectionPoint, float planeZ) {
+    if (rayDirection.z == 0) return false;  // Avoid division by zero
+
+    float t = (planeZ - rayOrigin.z) / rayDirection.z;
+    if (t < 0.0f) return false;  // Intersection is behind the camera
+
+    intersectionPoint = rayOrigin + t * rayDirection;  // Compute intersection point
+    return true;
+}
+
+glm::vec2 mouseToNDC(float xpos, float ypos) {
+    float x = (2.0f * xpos) / SCR_WIDTH - 1.0f;
+    float y = 1.0f - (2.0f * ypos) / SCR_HEIGHT;
+    return glm::vec2(x, y);
 }
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
@@ -342,15 +299,69 @@ void processInput(GLFWwindow *window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
     const float cameraSpeed = 2.5f * deltaTime; // adjust accordingly
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        cameraPos += cameraSpeed * cameraFront;
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        cameraPos -= cameraSpeed * cameraFront;
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        cameraPos += cameraSpeed * cameraUp;
+        champY += cameraSpeed;
+    }
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        cameraPos -= cameraSpeed * cameraUp;
+        champY -= cameraSpeed;
+    }
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
         cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        champX -= cameraSpeed;
+    }
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
         cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        champX += cameraSpeed;
+    }
+
+    if (!leftMousePressed && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {       
+        // Mouse to NDC
+        mouseNDC = mouseToNDC(mouseX, mouseY);
+        std::cout << "mouse pos: " << mouseNDC.x << "-" << mouseNDC.y << std::endl;
+
+        // Reverse view projection
+        glm::mat4 viewProjection = projection * view;
+        glm::mat4 inverseViewProjection = glm::inverse(viewProjection);
+
+        // Unproject near and far points in NDC
+        glm::vec4 nearPointNDC(mouseNDC.x, mouseNDC.y, -1.0f, 1.0f);  // z = -1 for near plane
+        glm::vec4 farPointNDC(mouseNDC.x, mouseNDC.y, 1.0f, 1.0f);    // z = 1 for far plane
+
+        glm::vec4 nearPointWorld = inverseViewProjection * nearPointNDC;
+        glm::vec4 farPointWorld = inverseViewProjection * farPointNDC; 
+
+        // Normalize the points (divide by w)
+        nearPointWorld /= nearPointWorld.w;
+        farPointWorld /= farPointWorld.w;
+
+        // Create the ray from near to far point
+        glm::vec3 rayOrigin = glm::vec3(nearPointWorld);
+        glm::vec3 rayDirection = glm::normalize(glm::vec3(farPointWorld - nearPointWorld));
+        glm::vec3 intersectionPoint;
+  
+        if (rayPlaneIntersection(rayOrigin, rayDirection, intersectionPoint)) {
+            std::cout << "Intersection at: " << intersectionPoint.x << ", " << intersectionPoint.y << ", " << intersectionPoint.z << std::endl;
+
+            // Move your object to this intersection point or do other operations
+            champX = intersectionPoint.x;
+            champY = intersectionPoint.y;
+            //moveObjectTo(intersectionPoint);
+        }
+
+        leftMousePressed = true;
+    }
+    else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE) {
+        leftMousePressed = false;
+    }
+
+    // Automated movement
+    if(doMoveTowards) {
+        
+    }
 }
+
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
 // ---------------------------------------------------------------------------------------------
@@ -361,10 +372,13 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
-bool firstMouse = false;
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     
+    // Set global mouse location
+    mouseX = xpos;
+    mouseY = ypos;
+
     if (firstMouse) // initially set to true
     {
         lastX = xpos;
@@ -395,7 +409,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
     direction.y = sin(glm::radians(pitch));
     direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    cameraFront = glm::normalize(direction);
+    //cameraFront = glm::normalize(direction);
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
