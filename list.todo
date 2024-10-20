@@ -1,0 +1,11 @@
+
+# Nice to haves
+
+
+# Must haves
+- Get new window size on resize events
+- Abstract into an object class
+
+
+# Design
+- Think about how to make dynamic map that loads in sections

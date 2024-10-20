@@ -75,7 +75,7 @@ glm::mat4 view = glm::mat4(1.0f);
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-bool rayPlaneIntersection(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, glm::vec3& intersectionPoint, float planeZ = 0.0f);
+bool rayPlaneIntersection(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, glm::vec3& intersectionPoint, float planeZ = 0.5f);
 glm::vec2 mouseToNDC(float xpos, float ypos);
 
 int main()
@@ -196,7 +196,7 @@ int main()
     view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));    
     view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
     
-    projection = glm::perspective(glm::radians(fov), 800.0f / 600.0f, 0.1f, 100.0f);
+    projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 
     // render loop
     // -----------
