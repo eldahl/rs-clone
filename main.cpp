@@ -239,7 +239,7 @@ int main()
 
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(champX, champY, 1.0f));
-        model = glm::scale(model, glm::vec3(2.16f, 3.7f, 0.0f));
+        model = glm::scale(model, glm::vec3(1.08f, 1.85f, 0.0f));
         champShader.setMat4("model", model);
 
         glDrawArrays(GL_TRIANGLES, 0, 6);
