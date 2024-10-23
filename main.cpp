@@ -14,7 +14,11 @@
 #include <glm/matrix.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
+#ifdef __linux
 #include <stb/stb_image.h>
+#elif __APPLE__
+#include "stb_image.h"
+#endif
 
 #include "shader.h"
 #include "camera.h"

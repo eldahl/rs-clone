@@ -1,7 +1,11 @@
 #include "texture.h"
 
 #include <glad/glad.h>
+#ifdef __linux
 #include <stb/stb_image.h>
+#elif __APPLE__
+#include "stb_image.h"
+#endif
 #include <iostream>
 
 Texture::Texture(const char* filePath, bool withAlpha) {
