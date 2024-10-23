@@ -124,7 +124,12 @@ int main()
     }
     
     glEnable(GL_DEPTH_TEST);
+
+#ifdef __APPLE__
+    glViewport(0, 0, SCR_WIDTH * 2, SCR_HEIGHT * 2);
+#else
     glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+#endif
 
     // build and compile our shader program
     // ------------------------------------
