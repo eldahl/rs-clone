@@ -17,7 +17,7 @@
 #ifdef __linux
 #include <stb/stb_image.h>
 #elif __APPLE__
-#include "stb_image.h"
+#include "../include/stb_image.h"
 #endif
 
 #include "shader.h"

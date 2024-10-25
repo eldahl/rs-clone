@@ -2,3 +2,4 @@ CompileFlags:
   Add:
     - "-I../include/glad/include"
     - "-I/usr/local/opt/glfw/include"
+    - "-I/usr/local/include/glm"
