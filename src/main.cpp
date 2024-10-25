@@ -24,6 +24,7 @@
 #include "camera.h"
 #include "texture.h"
 #include "vertex_data.h"
+#include "map.h"
 
 #include <iostream>
 
@@ -129,7 +130,12 @@ int main()
 #else
     glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 #endif
-
+    int availableTextureUnits;
+    glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &availableTextureUnits);
+    std::cout << "Number of texture units: " << availableTextureUnits << std::endl;
+    // Test if map loading works
+    Map map = Map("../res/data/world.map");
+    
     // build and compile our shader program
     // ------------------------------------
     Shader groundShader("../res/shaders/ground.vs", "../res/shaders/ground.fs"); 
@@ -199,17 +205,17 @@ int main()
     std::cout << vec.x << vec.y << vec.z << std::endl;
     */
 
-    // Tranformations
-    // note that we're translating the scene in the reverse direction of where we want to move
-    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));    
-    view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-    
-    projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
     {
+        // Tranformations
+        // note that we're translating the scene in the reverse direction of where we want to move
+        view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));    
+        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+
+        projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         // input
         // -----
@@ -224,20 +230,13 @@ int main()
         // ------
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-
+        
+        // render map
         glBindVertexArray(groundVD.vaoID);
-        for(int x = -5; x < 5; x++)
-        {
-            for(int y = -5; y < 5; y++) {
-                glm::mat4 model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3((float)x + 0.5f, (float)y + 0.5f, 0.0f));
-                groundShader.setMat4("model", model);
+        map.render(&groundShader);
 
-                glDrawArrays(GL_TRIANGLES, 0, 6);
-            }
-        }
-        //glDrawArrays(GL_TRIANGLES, 0, 36);
 
+        // render champ
         champShader.use();
         // Assign uniform to shader with transformation matricies
         champShader.setMat4("view", view);
@@ -324,6 +323,9 @@ void processInput(GLFWwindow *window)
         cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
         champX += cameraSpeed;
     }
+    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
+        fov = 45.0f;
+    }
 
     if (!leftMousePressed && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {       
         // Mouse to NDC
@@ -363,11 +365,6 @@ void processInput(GLFWwindow *window)
     }
     else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE) {
         leftMousePressed = false;
-    }
-
-    // Automated movement
-    if(doMoveTowards) {
-        
     }
 }
 
@@ -426,6 +423,6 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
     fov -= (float)yoffset;
     if (fov < 1.0f)
         fov = 1.0f;
-    if (fov > 45.0f)
-        fov = 45.0f; 
+    if (fov > 85.0f)
+        fov = 85.0f; 
 }

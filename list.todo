@@ -11,7 +11,7 @@
 - Abstract into an object class
 
 - Grid/tile system
-	- Map formar
+	- Map format
 	- Dynamic loading/unloading
 	- A* pathfinding
 
@@ -20,5 +20,5 @@
 
 # TODO tech debt
 - Use in-repo stb_image.h instead of package from AUR for all platforms
-- Move source files into source folder
-
+~~- Move source files into source folder~~
+- Handle errors in map loading
