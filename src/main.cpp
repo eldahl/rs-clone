@@ -79,7 +79,7 @@ glm::mat4 view = glm::mat4(1.0f);
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-bool rayPlaneIntersection(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, glm::vec3& intersectionPoint, float planeZ = 0.5f);
+bool rayPlaneIntersection(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, glm::vec3& intersectionPoint, float planeZ = 1.0f);
 glm::vec2 mouseToNDC(float xpos, float ypos);
 
 int main()
@@ -92,7 +92,6 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_DEPTH_BITS, 24);
-
 
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);

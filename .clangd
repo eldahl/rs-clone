@@ -1,4 +1,4 @@
 CompileFlags:
   Add:
-    - "-Iglad/include"
+    - "-I../include/glad/include"
     - "-I/usr/local/opt/glfw/include"

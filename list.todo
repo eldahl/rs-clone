@@ -1,11 +1,24 @@
-
 # Nice to haves
-
+- 3D
+- Animations
+- Item system
+	- Inventory
+	- Gear system
+- Enemies
 
 # Must haves
 - Get new window size on resize events
 - Abstract into an object class
 
+- Grid/tile system
+	- Map formar
+	- Dynamic loading/unloading
+	- A* pathfinding
 
 # Design
 - Think about how to make dynamic map that loads in sections
+
+# TODO tech debt
+- Use in-repo stb_image.h instead of package from AUR for all platforms
+- Move source files into source folder
+
