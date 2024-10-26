@@ -21,7 +21,7 @@
 #endif
 
 #include "shader.h"
-#include "camera.h"
+//#include "camera.h"
 #include "texture.h"
 #include "vertex_data.h"
 #include "map.h"
@@ -176,24 +176,15 @@ int main()
     stbi_set_flip_vertically_on_load(true);
 
     Texture champ = Texture("../res/textures/champ.png", true);
-    Texture ground = Texture("../res/textures/ground.jpg", false);
     
-    ground.genAndBindAndLoad();
     champ.genAndBindAndLoad();
 
     // Use shader
-    groundShader.use();
-    // Set uniform for shaders
-    groundShader.setInt("groundTex", 0);
-
     champShader.use();
-    champShader.setInt("champTex", 1);
+    champShader.setInt("champTex", 0);
 
     // render the triangle
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, ground.ID);
-    
-    glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, champ.ID);
 
     // Arrange stuff before rendering

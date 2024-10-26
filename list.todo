@@ -11,7 +11,8 @@
 - Abstract into an object class
 
 - Grid/tile system
-	- Map format
+	~~- Map format~~
+	- Grid system
 	- Dynamic loading/unloading
 	- A* pathfinding
 

@@ -22,14 +22,17 @@ public:
 private:
     // Map file file path
     std::string file_path;
+    int map_width, map_height;
 
     // Location of textures on the map cells
-    MapTextureIndex map_textures_catalog[16][16];
+    MapTextureIndex **map_textures_catalog;
     
     // Textures of the map
     std::vector<Texture> textures;
 
     void loadMapFromFile();
+    void initializeMapTextureCatalog();
+    void loadTexturesAndBind(std::vector<std::string> paths);
 };
 
 #endif

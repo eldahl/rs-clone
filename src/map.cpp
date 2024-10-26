@@ -1,5 +1,6 @@
 #include "map.h"
 #include "shader.h"
+#include "texture.h"
 
 #include <fstream>
 #include <iostream>
@@ -8,14 +9,20 @@
 
 Map::Map(std::string filePath) {
     file_path = filePath;
+    
 
-    for(int x = 0; x < 16; x++) {
-        for(int y = 0; y < 16; y++) {
+    loadMapFromFile();
+}
+
+void Map::initializeMapTextureCatalog() {
+    map_textures_catalog = new MapTextureIndex*[map_width];
+    for(int x = 0; x < map_width; x++) {
+        map_textures_catalog[x] = new MapTextureIndex[map_height];
+        for(int y = 0; y < map_height; y++) {
             map_textures_catalog[x][y] = static_cast<MapTextureIndex>(-1);
         }
     }
 
-    loadMapFromFile();
 }
 
 // (Super unsafe!!!) TODO: handle errors
@@ -33,6 +40,12 @@ void Map::loadMapFromFile() {
 
     std::cout << "Size: " << width << "x" << height << std::endl;
 
+    map_width = width;
+    map_height = height;
+
+    // Ready the map
+    initializeMapTextureCatalog();
+
     // Read textures
     int numOfTextures;
     std::vector<std::string> texturePaths;
@@ -44,6 +57,9 @@ void Map::loadMapFromFile() {
         texturePaths.push_back(textureStr);
         std::cout << textureStr << std::endl;
     }
+
+    // Load textures
+    loadTexturesAndBind(texturePaths);
 
     // Read map data file 
     while(!mapFile.eof()) {
@@ -57,10 +73,22 @@ void Map::loadMapFromFile() {
     }
 }
 
+void Map::loadTexturesAndBind(std::vector<std::string> paths) {
+    for(int i = 0; i < paths.size(); i++) {
+        std::cout << "Loading and binding: " << paths.at(i) << std::endl;
+        Texture tex = Texture(paths.at(i).c_str(), false);
+        textures.push_back(tex);
+
+        // Texture units binding with offset of 50 plus amount of textures loaded
+        glActiveTexture(GL_TEXTURE0 + 50 + textures.size());
+        glBindTexture(GL_TEXTURE_2D, tex.ID);
+    }
+}
+
 void Map::render(Shader *mapShader) {
     
-    for(int x = 0; x < 16; x++) {
-        for(int y = 0; y < 16; y++) {
+    for(int x = 0; x < map_width; x++) {
+        for(int y = 0; y < map_height; y++) {
             MapTextureIndex mti = map_textures_catalog[x][y];
             if (mti == 1) {
                 glm::mat4 model = glm::mat4(1.0f);
