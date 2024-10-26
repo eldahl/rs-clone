@@ -7,9 +7,9 @@
 
 #include <glm/glm.hpp>
 
-Map::Map(std::string filePath) {
+Map::Map(std::string filePath, Shader *shader) {
     file_path = filePath;
-    
+    mapShader  = shader;
 
     loadMapFromFile();
 }
@@ -62,6 +62,7 @@ void Map::loadMapFromFile() {
     loadTexturesAndBind(texturePaths);
 
     // Read map data file 
+    //  TODO: Reads the last line twice. Ok for now, as it just overwrites same value again
     while(!mapFile.eof()) {
         int x, y, textureIndex;
 
@@ -77,26 +78,35 @@ void Map::loadTexturesAndBind(std::vector<std::string> paths) {
     for(int i = 0; i < paths.size(); i++) {
         std::cout << "Loading and binding: " << paths.at(i) << std::endl;
         Texture tex = Texture(paths.at(i).c_str(), false);
-        textures.push_back(tex);
+        tex.genAndBindAndLoad();
 
-        // Texture units binding with offset of 50 plus amount of textures loaded
-        glActiveTexture(GL_TEXTURE0 + 50 + textures.size());
-        glBindTexture(GL_TEXTURE_2D, tex.ID);
+        textures.push_back(tex);
     }
 }
 
-void Map::render(Shader *mapShader) {
-    
+void Map::render() {
+    if(mapShader == nullptr)
+        throw;
     for(int x = 0; x < map_width; x++) {
         for(int y = 0; y < map_height; y++) {
             MapTextureIndex mti = map_textures_catalog[x][y];
-            if (mti == 1) {
-                glm::mat4 model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3((float)x + 0.5f, (float)y + 0.5f, 0.0f));
-                mapShader->setMat4("model", model);
+            
+            // If no texture is set, don't render anything
+            if((int)mti == -1)
+                continue;
+            
+            // Texture units binding with offset of 50 plus amount of textures loaded
+            glActiveTexture(GL_TEXTURE0 + 3 + mti);
+            glBindTexture(GL_TEXTURE_2D, textures.at(mti).ID);
+    
+            mapShader->use();
+            mapShader->setInt("Texture", 3+mti);
 
-                glDrawArrays(GL_TRIANGLES, 0, 6);
-            }
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3((float)x + 0.5f, (float)y + 0.5f, 0.0f));
+            mapShader->setMat4("model", model);
+
+            glDrawArrays(GL_TRIANGLES, 0, 6);
         }
     }
 }

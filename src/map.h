@@ -17,12 +17,14 @@ enum MapTextureIndex {
 
 class Map {
 public:
-    Map(std::string filePath);
-    void render(Shader *mapShader);
+    Map(std::string filePath, Shader *shader);
+    void render();
 private:
     // Map file file path
     std::string file_path;
     int map_width, map_height;
+        
+    Shader *mapShader = nullptr;
 
     // Location of textures on the map cells
     MapTextureIndex **map_textures_catalog;

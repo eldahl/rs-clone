@@ -134,12 +134,14 @@ int main()
     glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &availableTextureUnits);
     std::cout << "Number of texture units: " << availableTextureUnits << std::endl;
     // Test if map loading works
-    Map map = Map("../res/data/world.map");
     
     // build and compile our shader program
     // ------------------------------------
-    Shader groundShader("../res/shaders/ground.vs", "../res/shaders/ground.fs"); 
+    Shader mapShader("../res/shaders/ground.vs", "../res/shaders/ground.fs"); 
     Shader champShader("../res/shaders/vertex.vs", "../res/shaders/fragment.fs"); 
+    
+    // Create map
+    Map map = Map("../res/data/world.map", &mapShader);
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
@@ -212,10 +214,10 @@ int main()
         // -----
         processInput(window);
 
-        groundShader.use();
+        mapShader.use();
         // Assign uniform to shader with transformation matricies
-        groundShader.setMat4("view", view);
-        groundShader.setMat4("projection", projection);
+        mapShader.setMat4("view", view);
+        mapShader.setMat4("projection", projection);
 
         // render
         // ------
@@ -224,8 +226,7 @@ int main()
         
         // render map
         glBindVertexArray(groundVD.vaoID);
-        map.render(&groundShader);
-
+        map.render();
 
         // render champ
         champShader.use();
@@ -368,7 +369,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
 }
-
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     
