@@ -23,9 +23,9 @@ void Player::update() {
 
         // If the end of the list is reached, reset the movement path and node
         if(current_movement_node != nullptr) {
+            pos = current_movement_node->data;
+            std::cout << pos.x << " " << pos.y << std::endl;
             if(current_movement_node->next != nullptr) {
-                pos = current_movement_node->data;
-                std::cout << pos.x << " " << pos.y << std::endl;
                 current_movement_node = current_movement_node->next;
                 return;
             }

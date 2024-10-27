@@ -202,13 +202,9 @@ int main()
     */
 
     DoublyLinkedList<glm::vec2> *movementList = new DoublyLinkedList<glm::vec2>();
-    movementList->insertAtEnd(glm::vec2(0.0f, 0.0f));
-    movementList->insertAtEnd(glm::vec2(0.0f, 1.0f));
-    movementList->insertAtEnd(glm::vec2(0.0f, 2.0f));
-    movementList->insertAtEnd(glm::vec2(0.0f, 3.0f));
-    movementList->insertAtEnd(glm::vec2(1.0f, 0.0f));
-    movementList->insertAtEnd(glm::vec2(1.0f, 1.0f));
-    movementList->insertAtEnd(glm::vec2(1.0f, 2.0f));
+    movementList->insertAtEnd(glm::vec2(0.5f, 1.0f));
+    movementList->insertAtEnd(glm::vec2(1.5f, 1.0f));
+    movementList->insertAtEnd(glm::vec2(2.5f, 1.0f));
 
     player.moveTo(movementList);
 

@@ -69,7 +69,7 @@ void Map::loadMapFromFile() {
         mapFile >> x;
         mapFile >> y;
         mapFile >> textureIndex;
-        map_textures_catalog[y][x] = static_cast<MapTextureIndex>(textureIndex);
+        map_textures_catalog[x][y] = static_cast<MapTextureIndex>(textureIndex);
         std::cout << "Wrote tex index " << textureIndex << " to x: " << x << " y: " << y << std::endl; 
     }
 }
@@ -87,23 +87,23 @@ void Map::loadTexturesAndBind(std::vector<std::string> paths) {
 void Map::render() {
     if(mapShader == nullptr)
         throw;
-    for(int x = 0; x < map_width; x++) {
-        for(int y = 0; y < map_height; y++) {
+    for(int y = 0; y < map_height; y++) {
+        for(int x = 0; x < map_width; x++) {
             MapTextureIndex mti = map_textures_catalog[x][y];
-            
+
             // If no texture is set, don't render anything
             if((int)mti == -1)
                 continue;
-            
+
             // Texture units binding with offset of 50 plus amount of textures loaded
             glActiveTexture(GL_TEXTURE0 + 3 + mti);
             glBindTexture(GL_TEXTURE_2D, textures.at(mti).ID);
-    
+
             mapShader->use();
             mapShader->setInt("Texture", 3+mti);
 
             glm::mat4 model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3((float)x + 0.5f, (float)y + 0.5f, 0.0f));
+            model = glm::translate(model, glm::vec3((float)x, (float)y, 0.0f));
             mapShader->setMat4("model", model);
 
             glDrawArrays(GL_TRIANGLES, 0, 6);
