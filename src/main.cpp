@@ -66,8 +66,8 @@ int frameCount = 0;
 float fps = 0.0f;
 
 // Champ coords
-float champX = 4.5f;
-float champY = 4.5f;
+float champX = 0.0f;
+float champY = 0.0f;
 
 bool doMoveTowards = false;
 float targetX = 0.0f;
@@ -80,7 +80,10 @@ glm::mat4 view = glm::mat4(1.0f);
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-bool rayPlaneIntersection(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, glm::vec3& intersectionPoint, float planeZ = 1.0f);
+bool rayPlaneIntersection(const glm::vec3& rayOrigin, 
+                          const glm::vec3& rayDirection, 
+                          glm::vec3& intersectionPoint, 
+                          float planeZ = 1.0f);
 glm::vec2 mouseToNDC(float xpos, float ypos);
 
 int main()
@@ -168,7 +171,7 @@ int main()
     groundVD.bind(groundVertices, sizeof(groundVertices));
     groundVD.setVertexAttrib(0, 3, 5, 0);
     groundVD.setVertexAttrib(1, 2, 5, 3);
-    
+
     VertexData champVD = VertexData();
     champVD.bind(champVertices, sizeof(champVertices));
     champVD.setVertexAttrib(0, 3, 5, 0);
@@ -178,7 +181,7 @@ int main()
     stbi_set_flip_vertically_on_load(true);
 
     Texture champ = Texture("../res/textures/champ.png", true);
-    
+
     champ.genAndBindAndLoad();
 
     // Use shader
@@ -223,7 +226,7 @@ int main()
         // ------
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-        
+
         // render map
         glBindVertexArray(groundVD.vaoID);
         map.render();
@@ -276,7 +279,11 @@ int main()
     return 0;
 }
 
-bool rayPlaneIntersection(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, glm::vec3& intersectionPoint, float planeZ) {
+bool rayPlaneIntersection(const glm::vec3& rayOrigin, 
+                          const glm::vec3& rayDirection, 
+                          glm::vec3& intersectionPoint, 
+                          float planeZ) 
+{
     if (rayDirection.z == 0) return false;  // Avoid division by zero
 
     float t = (planeZ - rayOrigin.z) / rayDirection.z;
@@ -319,7 +326,7 @@ void processInput(GLFWwindow *window)
         fov = 45.0f;
     }
 
-    if (!leftMousePressed && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {       
+    if (!leftMousePressed && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
         // Mouse to NDC
         mouseNDC = mouseToNDC(mouseX, mouseY);
         std::cout << "mouse pos: " << mouseNDC.x << "-" << mouseNDC.y << std::endl;
@@ -345,7 +352,8 @@ void processInput(GLFWwindow *window)
         glm::vec3 intersectionPoint;
   
         if (rayPlaneIntersection(rayOrigin, rayDirection, intersectionPoint)) {
-            std::cout << "Intersection at: " << intersectionPoint.x << ", " << intersectionPoint.y << ", " << intersectionPoint.z << std::endl;
+            std::cout << "Intersection at: " << intersectionPoint.x << ", " 
+                << intersectionPoint.y << ", " << intersectionPoint.z << std::endl;
 
             // Move your object to this intersection point or do other operations
             champX = intersectionPoint.x;

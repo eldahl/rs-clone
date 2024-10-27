@@ -62,7 +62,7 @@ void Map::loadMapFromFile() {
     loadTexturesAndBind(texturePaths);
 
     // Read map data file 
-    //  TODO: Reads the last line twice. Ok for now, as it just overwrites same value again
+    //  FIX: Reads the last line twice. Ok for now, as it just overwrites same value again
     while(!mapFile.eof()) {
         int x, y, textureIndex;
 
