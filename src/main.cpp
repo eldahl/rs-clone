@@ -25,6 +25,7 @@
 #include "texture.h"
 #include "vertex_data.h"
 #include "map.h"
+#include "player.h"
 
 #include <iostream>
 
@@ -65,10 +66,6 @@ float frameTime = 0.0f;
 int frameCount = 0;
 float fps = 0.0f;
 
-// Champ coords
-float champX = 0.0f;
-float champY = 0.0f;
-
 bool doMoveTowards = false;
 float targetX = 0.0f;
 float targetY = 0.0f;
@@ -76,6 +73,9 @@ float targetY = 0.0f;
 // Transformation matrices
 glm::mat4 projection;
 glm::mat4 view = glm::mat4(1.0f);
+
+// Player
+Player player = Player();
 
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -201,6 +201,27 @@ int main()
     std::cout << vec.x << vec.y << vec.z << std::endl;
     */
 
+    DoublyLinkedList<glm::vec2> *movementList = new DoublyLinkedList<glm::vec2>();
+    movementList->insertAtEnd(glm::vec2(0.0f, 0.0f));
+    movementList->insertAtEnd(glm::vec2(0.0f, 1.0f));
+    movementList->insertAtEnd(glm::vec2(0.0f, 2.0f));
+    movementList->insertAtEnd(glm::vec2(0.0f, 3.0f));
+    movementList->insertAtEnd(glm::vec2(1.0f, 0.0f));
+    movementList->insertAtEnd(glm::vec2(1.0f, 1.0f));
+    movementList->insertAtEnd(glm::vec2(1.0f, 2.0f));
+
+    player.moveTo(movementList);
+
+    DoublyLinkedList<glm::vec2>::DoublyLinkedListNode *current = movementList->head;
+    std::cout << "List contents: ";
+    while (current != nullptr) {
+        std::cout << current->data.x << " " << current->data.y << std::endl;
+        current = current->next;
+    }
+    std::cout << std::endl;
+
+    float playerMoveTime = 0.0f;
+
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -216,6 +237,12 @@ int main()
         // input
         // -----
         processInput(window);
+
+        // Player
+        if(playerMoveTime > 0.25f && player.doMovement) {
+            player.update();
+            playerMoveTime = 0.0f;
+        }
 
         mapShader.use();
         // Assign uniform to shader with transformation matricies
@@ -240,7 +267,7 @@ int main()
         glBindVertexArray(champVD.vaoID);
 
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(champX, champY, 1.0f));
+        model = glm::translate(model, glm::vec3(player.pos.x, player.pos.y, 1.0f));
         model = glm::scale(model, glm::vec3(1.08f, 1.85f, 0.0f));
         champShader.setMat4("model", model);
 
@@ -255,6 +282,7 @@ int main()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
+        playerMoveTime += deltaTime; // For player movement ticks
         frameTime += deltaTime;
         if (frameTime <= 1) {
             frameCount++;
@@ -308,24 +336,26 @@ void processInput(GLFWwindow *window)
     const float cameraSpeed = 2.5f * deltaTime; // adjust accordingly
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
         cameraPos += cameraSpeed * cameraUp;
-        champY += cameraSpeed;
+        player.pos.y += cameraSpeed;
     }
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
         cameraPos -= cameraSpeed * cameraUp;
-        champY -= cameraSpeed;
+        player.pos.y -= cameraSpeed;
     }
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
         cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-        champX -= cameraSpeed;
+        player.pos.x -= cameraSpeed;
     }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
         cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-        champX += cameraSpeed;
+        player.pos.x += cameraSpeed;
     }
     if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
         fov = 45.0f;
     }
-
+    if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS && player.doMovement == false) {
+        player.doMovement = true;
+    }
     if (!leftMousePressed && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
         // Mouse to NDC
         mouseNDC = mouseToNDC(mouseX, mouseY);
@@ -356,8 +386,8 @@ void processInput(GLFWwindow *window)
                 << intersectionPoint.y << ", " << intersectionPoint.z << std::endl;
 
             // Move your object to this intersection point or do other operations
-            champX = intersectionPoint.x;
-            champY = intersectionPoint.y;
+            player.pos.x = intersectionPoint.x;
+            player.pos.y = intersectionPoint.y;
             //moveObjectTo(intersectionPoint);
         }
 
