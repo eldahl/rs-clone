@@ -1,10 +1,12 @@
 #include <cassert>
 
 #include <glm/detail/qualifier.hpp>
+#include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/vector_float2.hpp>
 #include <glm/ext/vector_float3.hpp>
+#include <glm/ext/vector_float4.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -85,8 +87,9 @@ bool rayPlaneIntersection(const glm::vec3& rayOrigin,
                           glm::vec3& intersectionPoint, 
                           float planeZ = 1.0f);
 glm::vec2 mouseToNDC(float xpos, float ypos);
+glm::vec4 reverse_view_projection(glm::vec4 projected);
 
-int main()
+    int main()
 {
     
     // glfw: initialize and configure
@@ -136,7 +139,6 @@ int main()
     int availableTextureUnits;
     glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &availableTextureUnits);
     std::cout << "Number of texture units: " << availableTextureUnits << std::endl;
-    // Test if map loading works
     
     // build and compile our shader program
     // ------------------------------------
@@ -144,8 +146,9 @@ int main()
     Shader champShader("../res/shaders/vertex.vs", "../res/shaders/fragment.fs"); 
     
     // Create map
-    Map map = Map("../res/data/world.map", &mapShader);
-
+    Map map = Map("../res/data/world.map", &mapShader); //, &projection, &view);
+    //map.setOrigin(glm::vec2(0.5f, 0.5f));
+    
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
     
@@ -202,9 +205,15 @@ int main()
     */
 
     DoublyLinkedList<glm::vec2> *movementList = new DoublyLinkedList<glm::vec2>();
-    movementList->insertAtEnd(glm::vec2(0.5f, 1.0f));
-    movementList->insertAtEnd(glm::vec2(1.5f, 1.0f));
-    movementList->insertAtEnd(glm::vec2(2.5f, 1.0f));
+    movementList->insertAtEnd(glm::vec2(0.0f, 0.0f));
+    movementList->insertAtEnd(glm::vec2(1.0f, 0.0f));
+    movementList->insertAtEnd(glm::vec2(2.0f, 0.0f));
+    movementList->insertAtEnd(glm::vec2(0.0f, 1.0f));
+    movementList->insertAtEnd(glm::vec2(1.0f, 1.0f));
+    movementList->insertAtEnd(glm::vec2(2.0f, 1.0f));
+    movementList->insertAtEnd(glm::vec2(0.0f, 2.0f));
+    movementList->insertAtEnd(glm::vec2(1.0f, 2.0f));
+    movementList->insertAtEnd(glm::vec2(2.0f, 2.0f));
 
     player.moveTo(movementList);
 
@@ -217,17 +226,17 @@ int main()
     std::cout << std::endl;
 
     float playerMoveTime = 0.0f;
-
+    view = glm::translate(view, glm::vec3(0.5f, 0.5f, 0.0f));
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
     {
         // Tranformations
         // note that we're translating the scene in the reverse direction of where we want to move
-        view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));    
-        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+        //view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 
-        projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        //projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH) / 60, 0.0f, static_cast<float>(SCR_HEIGHT) / 60, 0.1f, 100.0f);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         // input
@@ -263,9 +272,11 @@ int main()
         glBindVertexArray(champVD.vaoID);
 
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(player.pos.x, player.pos.y, 1.0f));
-        model = glm::scale(model, glm::vec3(1.08f, 1.85f, 0.0f));
+        model = glm::translate(model, glm::vec3(player.pos.x, player.pos.y, 0.1f));
+        //model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+        //model = glm::scale(model, glm::vec3(1.08f, 1.85f, 0.0f));
         champShader.setMat4("model", model);
+
 
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
@@ -323,6 +334,8 @@ glm::vec2 mouseToNDC(float xpos, float ypos) {
     return glm::vec2(x, y);
 }
 
+bool w_pressed, s_pressed, a_pressed, d_pressed;
+
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
 void processInput(GLFWwindow *window)
@@ -330,22 +343,42 @@ void processInput(GLFWwindow *window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
     const float cameraSpeed = 2.5f * deltaTime; // adjust accordingly
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-        cameraPos += cameraSpeed * cameraUp;
-        player.pos.y += cameraSpeed;
+    
+    //std::cout << "X: " << player.pos.x << " Y: " << player.pos.y << std::endl;
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS && !w_pressed) {
+        player.pos.y += 1;//cameraSpeed;
+        w_pressed = true;
     }
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-        cameraPos -= cameraSpeed * cameraUp;
-        player.pos.y -= cameraSpeed;
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_RELEASE) {
+        w_pressed = false;
     }
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-        player.pos.x -= cameraSpeed;
+
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS && !s_pressed) {
+        player.pos.y -= 1;//cameraSpeed;
+        s_pressed = true;
     }
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-        player.pos.x += cameraSpeed;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_RELEASE) {
+        s_pressed = false;
     }
+
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS && !a_pressed) {
+        player.pos.x -= 1;//ameraSpeed;
+        a_pressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_RELEASE) {
+        a_pressed = false;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS && !d_pressed) {
+        player.pos.x += 1;//cameraSpeed;
+        d_pressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_RELEASE) {
+        d_pressed = false;
+    }
+
+
     if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
         fov = 45.0f;
     }
@@ -382,8 +415,8 @@ void processInput(GLFWwindow *window)
                 << intersectionPoint.y << ", " << intersectionPoint.z << std::endl;
 
             // Move your object to this intersection point or do other operations
-            player.pos.x = intersectionPoint.x;
-            player.pos.y = intersectionPoint.y;
+            //player.pos.x = intersectionPoint.x;
+            //player.pos.y = intersectionPoint.y;
             //moveObjectTo(intersectionPoint);
         }
 
@@ -394,6 +427,14 @@ void processInput(GLFWwindow *window)
     }
 }
 
+// Reverses the supplied projected vec4 to the inverse of the projection * view
+glm::vec4 reverse_view_projection(glm::vec4 projected) {
+    // Reverse view projection
+    glm::mat4 viewProjection = projection * view;
+    glm::mat4 inverseViewProjection = glm::inverse(viewProjection);
+
+    return inverseViewProjection * projected;
+}
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
 // ---------------------------------------------------------------------------------------------

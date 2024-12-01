@@ -3,6 +3,8 @@
 #include "texture.h"
 
 #include <fstream>
+#include <glm/ext/matrix_float4x4.hpp>
+#include <glm/ext/matrix_transform.hpp>
 #include <iostream>
 
 #include <glm/glm.hpp>
@@ -23,6 +25,11 @@ void Map::initializeMapTextureCatalog() {
         }
     }
 
+}
+
+void Map::setOrigin(glm::vec2 offset) {
+    originX = offset.x;
+    originY = offset.y;
 }
 
 // (Super unsafe!!!) TODO: handle errors
@@ -89,6 +96,7 @@ void Map::render() {
         throw;
     for(int y = 0; y < map_height; y++) {
         for(int x = 0; x < map_width; x++) {
+
             MapTextureIndex mti = map_textures_catalog[x][y];
 
             // If no texture is set, don't render anything
@@ -103,7 +111,8 @@ void Map::render() {
             mapShader->setInt("Texture", 3+mti);
 
             glm::mat4 model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3((float)x, (float)y, 0.0f));
+            model = glm::translate(model, glm::vec3(x, y, 0.0f));
+            //model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
             mapShader->setMat4("model", model);
 
             glDrawArrays(GL_TRIANGLES, 0, 6);

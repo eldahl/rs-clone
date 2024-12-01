@@ -11,7 +11,7 @@ class Player {
 
 public:
     bool doMovement = false;
-    glm::vec2 pos;
+    glm::vec2 pos = glm::vec2(0.0f, 0.0f);
 
     Player();
 
